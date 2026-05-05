@@ -352,25 +352,11 @@ export default function App() {
   const submitToBeehiiv = async (firstName, lastName, email) => {
     if (!email) return;
     try {
-      const res = await fetch(
-        "https://api.beehiiv.com/v2/publications/e49859f8-dc3c-4c21-92c0-86a2035a1f3f/subscriptions",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer kZv1TA5V1aKWl7hMtnawcXaS8RlxIy9E1b1yh5dDsZyKDbWAophIurR3dzh57H3W",
-          },
-          body: JSON.stringify({
-            email,
-            first_name: firstName,
-            last_name: lastName,
-            reactivate_existing: true,
-            send_welcome_email: true,
-            utm_source: "f5-pushup-challenge",
-            utm_medium: "app-signup",
-          }),
-        }
-      );
+      const res = await fetch("/api/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, first_name: firstName, last_name: lastName }),
+      });
       const data = await res.json();
       console.log("Beehiiv:", data);
     } catch (e) { console.log("Beehiiv error:", e); }
