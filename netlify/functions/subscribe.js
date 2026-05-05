@@ -8,7 +8,7 @@ export default async (request) => {
     const { email, first_name, last_name } = await request.json();
 
     const res = await fetch(
-      "https://api.beehiiv.com/v2/publications/e49859f8-dc3c-4c21-92c0-86a2035a1f3f/subscriptions",
+      "https://api.beehiiv.com/v2/publications/pub_e49859f8-dc3c-4c21-92c0-86a2035a1f3f/subscriptions",
       {
         method: "POST",
         headers: {
