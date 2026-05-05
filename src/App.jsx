@@ -97,34 +97,79 @@ const isSunday = () => new Date().getDay() === 0;
 
 const today = () => new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
+// ── SUPABASE CONFIG ───────────────────────────────────────────────────────
+const SUPABASE_URL = "https://plcijuytwvmhchiesxyq.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsY2lqdXl0d3ZtaGNoaWVzeHlxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5OTI5NzEsImV4cCI6MjA5MzU2ODk3MX0.8vdioR0Nu8akkd8qn5QUpMrVQ84_bIs_vNugE39X0z0";
+
+const sbFetch = async (endpoint, options = {}) => {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${endpoint}`, {
+    ...options,
+    headers: {
+      "apikey": SUPABASE_ANON_KEY,
+      "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+      "Content-Type": "application/json",
+      "Prefer": "return=representation",
+      ...(options.headers || {}),
+    },
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Supabase error ${res.status}: ${err}`);
+  }
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
+};
+
+const rowToUser = (row) => ({
+  name:          row.name,
+  firstName:     row.first_name,
+  lastName:      row.last_name,
+  email:         row.email,
+  discIndex:     row.disc_index,
+  levelIndex:    row.level_index,
+  baseline:      row.baseline,
+  baselineMode:  row.baseline_mode,
+  log:           row.log || [],
+  clearedLevels: row.cleared_levels || [],
+});
+
+const userToRow = (u) => ({
+  name:           u.name,
+  first_name:     u.firstName,
+  last_name:      u.lastName,
+  email:          u.email,
+  disc_index:     u.discIndex,
+  level_index:    u.levelIndex,
+  baseline:       u.baseline,
+  baseline_mode:  u.baselineMode,
+  log:            u.log || [],
+  cleared_levels: u.clearedLevels || [],
+  updated_at:     new Date().toISOString(),
+});
+
 // ── STORAGE HELPERS ───────────────────────────────────────────────────────
 const loadUser = async (name) => {
   try {
-    const r = await window.storage.get(`user:${name.toLowerCase()}`, true);
-    return r ? JSON.parse(r.value) : null;
-  } catch { return null; }
+    const rows = await sbFetch(`users?name=eq.${encodeURIComponent(name)}&limit=1`);
+    return rows && rows.length > 0 ? rowToUser(rows[0]) : null;
+  } catch (e) { console.error("loadUser:", e); return null; }
 };
 
-const saveUser = async (name, data) => {
+const saveUser = async (_name, data) => {
   try {
-    await window.storage.set(`user:${name.toLowerCase()}`, JSON.stringify(data), true);
-  } catch (e) { console.error(e); }
+    await sbFetch("users", {
+      method: "POST",
+      headers: { "Prefer": "resolution=merge-duplicates,return=representation" },
+      body: JSON.stringify(userToRow(data)),
+    });
+  } catch (e) { console.error("saveUser:", e); }
 };
 
 const loadAllUsers = async () => {
   try {
-    const r = await window.storage.list("user:", true);
-    if (!r || !r.keys) return [];
-    const users = await Promise.all(
-      r.keys.map(async (k) => {
-        try {
-          const u = await window.storage.get(k, true);
-          return u ? JSON.parse(u.value) : null;
-        } catch { return null; }
-      })
-    );
-    return users.filter(Boolean);
-  } catch { return []; }
+    const rows = await sbFetch("users?order=updated_at.desc");
+    return rows ? rows.map(rowToUser) : [];
+  } catch (e) { console.error("loadAllUsers:", e); return []; }
 };
 
 // ── STYLES ────────────────────────────────────────────────────────────────
