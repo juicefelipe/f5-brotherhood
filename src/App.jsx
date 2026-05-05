@@ -732,24 +732,73 @@ function Dashboard({ user, disc, level, gate, lastRep, repInput, setRepInput, lo
 // ── LEADERBOARD ───────────────────────────────────────────────────────────
 function Leaderboard({ allUsers, loading }) {
   const scored = allUsers
-    .map(u => ({
-      name: u.name,
-      discIndex: u.discIndex,
-      levelIndex: u.levelIndex,
-      score: u.discIndex * 10 + u.levelIndex,
-      disc: DISCIPLINES[u.discIndex],
-      level: DISCIPLINES[u.discIndex]?.levels[u.levelIndex],
-      totalReps: (u.log || []).reduce((s, e) => s + (e.isBaseline ? 0 : e.reps), 0),
-      sessions: (u.log || []).filter(e => !e.isBaseline).length,
-    }))
+    .map(u => {
+      const disc = DISCIPLINES[u.discIndex];
+      const level = disc?.levels[u.levelIndex];
+      const log = u.log || [];
+      const totalReps = log.reduce((s, e) => s + (e.isBaseline ? 0 : e.reps), 0);
+      const sessions = log.filter(e => !e.isBaseline).length;
+      // Most recent non-baseline log entry
+      const lastEntry = [...log].reverse().find(e => !e.isBaseline);
+      const lastLevel = lastEntry
+        ? `${lastEntry.disc}-${lastEntry.levelNum}`
+        : u.baselineMode ? `${disc?.letter} — Baseline needed` : `${disc?.letter}-${level?.num}`;
+      const lastLevelName = lastEntry?.levelName ?? (u.baselineMode ? "Baseline Test" : level?.name ?? "—");
+      return {
+        name: u.name,
+        score: u.discIndex * 10 + u.levelIndex,
+        disc, level, totalReps, sessions, lastLevel, lastLevelName,
+        lastDate: lastEntry?.date ?? "—",
+        lastReps: lastEntry?.reps ?? "—",
+      };
+    })
     .sort((a, b) => b.score - a.score || b.totalReps - a.totalReps);
+
+  // Totals
+  const grandTotal = scored.reduce((s, u) => s + u.totalReps, 0);
+  const grandSessions = scored.reduce((s, u) => s + u.sessions, 0);
 
   if (loading) return <div className="empty-state">Loading...</div>;
   if (scored.length === 0) return <div className="empty-state">No members yet. Be the first.</div>;
 
   return (
     <div>
-      <div className="screen-label" style={{ marginBottom: 12 }}>Brotherhood Board</div>
+      <div className="screen-label" style={{ marginBottom: 8 }}>Brotherhood Board</div>
+
+      {/* Group totals banner */}
+      <div style={{
+        background: "var(--steel)", borderRadius: 8, padding: "10px 14px",
+        display: "flex", justifyContent: "space-around", marginBottom: 14,
+        borderBottom: "3px solid var(--red)"
+      }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 28, color: "var(--white)", lineHeight: 1 }}>
+            {grandTotal.toLocaleString()}
+          </div>
+          <div style={{ fontSize: 10, color: "var(--gold)", letterSpacing: 1, textTransform: "uppercase", marginTop: 2 }}>
+            Total Reps
+          </div>
+        </div>
+        <div style={{ width: 1, background: "#ffffff22" }} />
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 28, color: "var(--white)", lineHeight: 1 }}>
+            {grandSessions}
+          </div>
+          <div style={{ fontSize: 10, color: "var(--gold)", letterSpacing: 1, textTransform: "uppercase", marginTop: 2 }}>
+            Sessions
+          </div>
+        </div>
+        <div style={{ width: 1, background: "#ffffff22" }} />
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 28, color: "var(--white)", lineHeight: 1 }}>
+            {scored.length}
+          </div>
+          <div style={{ fontSize: 10, color: "var(--gold)", letterSpacing: 1, textTransform: "uppercase", marginTop: 2 }}>
+            Members
+          </div>
+        </div>
+      </div>
+
       <div className="lb-list">
         {scored.map((u, i) => (
           <div key={u.name} className="lb-row">
@@ -758,8 +807,18 @@ function Leaderboard({ allUsers, loading }) {
             </div>
             <div className="lb-info">
               <div className="lb-name">{u.name}</div>
-              <div className="lb-detail">
-                Disc {u.disc?.letter}-{u.level?.num} · {u.sessions} sessions · {u.totalReps} total reps
+              <div className="lb-detail" style={{ marginTop: 2 }}>
+                <span style={{ color: "var(--white)", fontWeight: 600 }}>{u.lastLevel}</span>
+                <span style={{ margin: "0 5px", color: "#333" }}>·</span>
+                {u.lastLevelName}
+              </div>
+              <div className="lb-detail" style={{ marginTop: 2 }}>
+                {u.totalReps.toLocaleString()} total reps
+                <span style={{ margin: "0 5px" }}>·</span>
+                {u.sessions} sessions
+                {u.lastDate !== "—" && (
+                  <><span style={{ margin: "0 5px" }}>·</span>last: {u.lastDate} ({u.lastReps} reps)</>
+                )}
               </div>
             </div>
             <div className="lb-score">{u.disc?.letter}{u.level?.num}</div>
