@@ -349,19 +349,31 @@ export default function App() {
     }
   };
 
-  const submitToBeehiiv = async (firstName, lastName, email, phone) => {
+  const submitToBeehiiv = async (firstName, lastName, email) => {
     if (!email) return;
     try {
-      await fetch("https://mail.f5brotherhood.com/widget/form/uCpkk9lf8NRgc17yBIqf", {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({
-          email, first_name: firstName, last_name: lastName,
-          phone: phone || "", formId: "uCpkk9lf8NRgc17yBIqf"
-        }),
-        mode: "no-cors",
-      });
-    } catch (e) { console.log("Beehiiv submit:", e); }
+      const res = await fetch(
+        "https://api.beehiiv.com/v2/publications/e49859f8-dc3c-4c21-92c0-86a2035a1f3f/subscriptions",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer kZv1TA5V1aKWl7hMtnawcXaS8RlxIy9E1b1yh5dDsZyKDbWAophIurR3dzh57H3W",
+          },
+          body: JSON.stringify({
+            email,
+            first_name: firstName,
+            last_name: lastName,
+            reactivate_existing: true,
+            send_welcome_email: true,
+            utm_source: "f5-pushup-challenge",
+            utm_medium: "app-signup",
+          }),
+        }
+      );
+      const data = await res.json();
+      console.log("Beehiiv:", data);
+    } catch (e) { console.log("Beehiiv error:", e); }
   };
 
   const createUser = async () => {
